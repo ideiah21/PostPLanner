@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="pt-BR" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planejamento Estratégico Integrado</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'DM Sans', sans-serif; }
+    :root { --bg: #0a0e14; --surface: #151b27; --text: #f5f7fa; --primary: #4a9eff; --secondary: #8b95a8; }
+    body { background: var(--bg); color: var(--text); }
+    .tab-btn { transition: all 0.2s; }
+    .tab-btn.active { border-color: var(--primary); color: var(--primary); background: rgba(59,130,246,0.08); }
+    input, select, textarea { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15); color: var(--text); border-radius: 6px; padding: 6px 10px; font-size: 13px; width: 100%; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); background: rgba(74,158,255,0.08); }
+    select option { background: var(--surface); color: var(--text); }
+    .month-card { background: var(--surface); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px; transition: transform 0.15s; }
+    .month-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 10px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--secondary); border-bottom: 1px solid rgba(255,255,255,0.08); }
+    td { padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+    .status-ideia { background: #2a2e37; color: #d1d5db; }
+    .status-planejando { background: #0f2847; color: #a7d8ff; }
+    .status-rascunho { background: #3d2563; color: #e9d5ff; }
+    .status-publicado { background: #0d452a; color: #a7f3d0; }
+    .funil-topo { background: #0f2847; color: #a7d8ff; }
+    .funil-meio { background: #4a3d1f; color: #fcd34d; }
+    .funil-base { background: #0d452a; color: #a7f3d0; }
+    .badge { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; display: inline-block; }
+    .delete-btn { opacity: 0.4; cursor: pointer; transition: opacity 0.2s; }
+    .delete-btn:hover { opacity: 1; color: #ef4444; }
+    .warning-badge { background: #7c2d12; color: #fed7aa; font-size: 10px; padding: 2px 6px; border-radius: 999px; margin-left: 6px; }
+  </style>
+</head>
+<body class="h-full">
+  <!-- Login Screen -->
+  <div id="login-screen" class="h-full w-full flex items-center justify-center p-4 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+    <div class="month-card max-w-md w-full shadow-2xl">
+      <div class="text-center mb-8">
+        <div class="mb-4"><i data-lucide="shield-check" style="width:48px;height:48px;margin:0 auto" class="text-blue-400"></i></div>
+        <h1 class="text-3xl font-bold mb-2 text-white">Planejamento Integrado</h1>
+        <p class="text-sm text-gray-400">Impulsões → Diretrizes → Calendário</p>
+      </div>
+      <div class="space-y-4">
+        <div><label class="text-xs uppercase text-gray-400 font-semibold block mb-2">Nome / E-mail</label> <input id="user-input" type="text" placeholder="Seu identificador único" class="text-sm w-full"></div>
+        <button onclick="loginUser()" class="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-medium transition transform hover:scale-105 active:scale-95">Acessar Sistema</button>
+        <div class="text-xs text-gray-500 text-center pt-4 border-t border-gray-700">
+          <p>✓ Dados salvos por usuário (localStorage)</p>
+          <p>✓ Funil e TUG do calendário sincronizados com a matriz semanal</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="app" class="h-full flex flex-col overflow-hidden hidden">
+    <header class="flex items-center justify-between px-6 py-4 border-b border-white/5 flex-shrink-0">
+      <div>
+        <h1 id="app-title" class="text-lg font-bold tracking-tight">Planejamento Estratégico Integrado</h1>
+        <p id="user-badge" class="text-xs text-gray-400 mt-1"></p>
+      </div>
+      <div class="flex gap-2">
+        <div class="flex gap-1">
+          <button onclick="switchTab(0)" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent rounded-t" data-tab="0">Impulsões Macro</button>
+          <button onclick="switchTab(1)" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent rounded-t" data-tab="1">Diretrizes Estáticas</button>
+          <button onclick="switchTab(2)" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent rounded-t" data-tab="2">Calendário Operacional</button>
+        </div>
+        <div class="flex gap-2 border-l border-white/10 pl-4">
+          <button id="save-btn" onclick="saveUserData()" class="flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 rounded text-xs font-medium"><i data-lucide="save" style="width:14px;height:14px"></i> Salvar</button>
+          <button onclick="exportJSON()" class="flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded text-xs font-medium"><i data-lucide="download" style="width:14px;height:14px"></i> Exportar</button>
+          <button onclick="importJSON()" class="flex items-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 rounded text-xs font-medium"><i data-lucide="upload" style="width:14px;height:14px"></i> Carregar</button>
+          <button onclick="logoutUser()" class="flex items-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 rounded text-xs font-medium"><i data-lucide="log-out" style="width:14px;height:14px"></i> Sair</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="flex-1 overflow-hidden">
+      <!-- Tab 0: Impulsões Macro -->
+      <div id="tab0" class="h-full overflow-auto p-6 hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="months-grid"></div>
+      </div>
+
+      <!-- Tab 1: Diretrizes Estáticas -->
+      <div id="tab1" class="h-full overflow-auto p-6 hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="month-card">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-blue-400 mb-4">Configurações da Marca</h3>
+            <div class="space-y-3" id="brand-fields"></div>
+            <div class="mt-4 pt-4 border-t border-gray-700">
+              <h4 class="text-xs font-semibold text-gray-400 mb-2">🧠 Resumo da Impulsão Ativa (Mês corrente)</h4>
+              <div id="active-pulsao-summary" class="text-xs space-y-1 bg-black/20 p-2 rounded"></div>
+            </div>
+          </div>
+          <div class="month-card">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-sm font-bold uppercase tracking-wider text-blue-400">Matriz de Distribuição Semanal</h3>
+              <button onclick="addWeekMatrix()" class="flex items-center gap-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs"><i data-lucide="plus" style="width:14px;height:14px"></i> Semana</button>
+            </div>
+            <div id="matrix-container" class="space-y-4"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Calendário Operacional -->
+      <div id="tab2" class="h-full overflow-auto p-6 hidden">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-blue-400">Posts Planejados</h3>
+          <button onclick="addPost()" class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm"><i data-lucide="plus" style="width:16px;height:16px"></i> Nova Postagem</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table id="posts-table">
+            <thead><tr><th>Data</th><th>Dia</th><th>Tema</th><th>Status</th><th>Canal</th><th>Formato</th><th>Funil</th><th>TUG</th><th>CTA</th><th>Notas</th><th>Mídia</th><th></th></tr></thead>
+            <tbody id="posts-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    const PULSOES_MAP = {
+      0: { pulsao: 'Renovação e Recomeço', gatilhos: 'mudança, metas, autocuidado, organização', oportunidades: 'liquidações, planner, fitness, beleza, organização' },
+      1: { pulsao: 'Prazer e Socialização', gatilhos: 'diversão, pertencimento, sensualidade, escapismo', oportunidades: 'carnaval, verão, experiências, moda festa, turismo' },
+      2: { pulsao: 'Identidade e Empoderamento', gatilhos: 'reconhecimento, autonomia, autoestima', oportunidades: 'mês da mulher, reposicionamento pessoal, educação, carreira' },
+      3: { pulsao: 'Afeto e Conexão Familiar', gatilhos: 'cuidado, tradição, acolhimento', oportunidades: 'páscoa, presentes, gastronomia, casa, decoração' },
+      4: { pulsao: 'Cuidado e Gratidão', gatilhos: 'vínculo, proteção, homenagem', oportunidades: 'dia das mães, autocuidado, bem-estar, premium gifting' },
+      5: { pulsao: 'Romance e Pertencimento', gatilhos: 'amor, vínculo, intimidade, celebração', oportunidades: 'dia dos namorados, festas juninas, experiências a dois' },
+      6: { pulsao: 'Pausa e Recompensa', gatilhos: 'descanso, indulgência, férias, merecimento', oportunidades: 'férias, turismo, entretenimento, conforto, winter sales' },
+      7: { pulsao: 'Conquista e Autoridade', gatilhos: 'performance, liderança, provisão', oportunidades: 'dia dos pais, negócios, tecnologia, carreira' },
+      8: { pulsao: 'Renovação e Energia', gatilhos: 'florescimento, leveza, novidade', oportunidades: 'primavera, lançamentos, moda nova, wellness' },
+      9: { pulsao: 'Lúdico e Comunidade', gatilhos: 'diversão, nostalgia, criatividade', oportunidades: 'dia das crianças, halloween, experiências, colecionáveis' },
+      10: { pulsao: 'Urgência e Oportunidade', gatilhos: 'escassez, economia, ganho', oportunidades: 'Black Friday, antecipação natalina, upgrades' },
+      11: { pulsao: 'Celebração e Generosidade', gatilhos: 'recompensa, nostalgia, abundância', oportunidades: 'Natal, Ano Novo, presentes, luxo, confraternização' }
+    };
+    const DIAS = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+    const FUNIL_OPTS = ['Topo (60% - Atração)','Meio (30% - Autoridade)','Base (10% - Conversão)'];
+    const TUG_OPTS = ['Cognitivo (Educação)','Afetivo (Entretenimento/Fuga)','Integração Social (Comunidade)','Integração Pessoal (Status/Identidade)'];
+    const STATUS_OPTS = ['Ideia','Planejando','Rascunho','Publicado'];
+    const CANAIS = ['Instagram','LinkedIn','TikTok','YouTube','WhatsApp','E-mail'];
+    const FORMATOS = ['Reels','Carrossel','Estático','Stories Diários','Live/Vídeo Longo','Enquete/Caixa Interativa'];
+
+    let DB, CURRENT_USER, currentTab = 0;
+
+    function getDefaultDB() {
+      return {
+        months: MONTHS.map((m,i) => ({ 
+          pulsao: PULSOES_MAP[i].pulsao, 
+          tema: '', canais: '', verba: '', 
+          gatilhos: PULSOES_MAP[i].gatilhos, 
+          oportunidades: PULSOES_MAP[i].oportunidades 
+        })),
+        brand: { nome: '', objetivo: '', publico: '', tom: '' },
+        matrix: [ DIAS.map(() => ({ funil: FUNIL_OPTS[0], tug: TUG_OPTS[0], notas: '', funilCustom: '', tugCustom: '' })) ],
+        posts: []
+      };
+    }
+
+    // --- Helper para calcular a semana do mês a partir de uma data ---
+    function getWeekOfMonth(dateStr) {
+      if (!dateStr) return 0;
+      const date = new Date(dateStr);
+      const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+      const dayOfMonth = date.getDate();
+      return Math.floor((dayOfMonth - firstDay.getDay() + 7) / 7);
+    }
+
+    // --- Obtém funil e TUG da matriz para uma determinada data e dia da semana ---
+    function getMatrixValuesForPost(dateStr, dayOfWeekIdx) {
+      if (!DB.matrix.length) return { funil: FUNIL_OPTS[0], tug: TUG_OPTS[0] };
+      let weekIndex = 0;
+      if (dateStr) {
+        weekIndex = getWeekOfMonth(dateStr);
+        if (weekIndex >= DB.matrix.length) weekIndex = DB.matrix.length - 1;
+      }
+      const weekData = DB.matrix[weekIndex];
+      const dayData = weekData[dayOfWeekIdx] || weekData[0];
+      let funil = dayData.funilCustom || dayData.funil;
+      let tug = dayData.tugCustom || dayData.tug;
+      return { funil, tug };
+    }
+
+    // --- Atualiza funil e TUG de um post baseado na data e dia (chamado quando dia ou data muda) ---
+    function updatePostFunnelAndTug(postIdx) {
+      const post = DB.posts[postIdx];
+      if (!post) return;
+      const dayIdx = DIAS.indexOf(post.dia);
+      if (dayIdx === -1) return;
+      const { funil, tug } = getMatrixValuesForPost(post.date, dayIdx);
+      post.funil = funil;
+      post.tug = tug;
+      renderPosts(); // re-renderiza para mostrar os novos valores
+    }
+
+    // --- Login e persistência ---
+    function loginUser() {
+      const username = document.getElementById('user-input').value.trim();
+      if (!username) return;
+      CURRENT_USER = username;
+      loadUserDB();
+      showApp();
+    }
+
+    function loadUserDB() {
+      const stored = localStorage.getItem(`planContent_${CURRENT_USER}`);
+      DB = stored ? JSON.parse(stored) : getDefaultDB();
+      document.getElementById('user-badge').textContent = `👤 ${CURRENT_USER}`;
+    }
+
+    function saveUserData() {
+      if (!CURRENT_USER) return;
+      localStorage.setItem(`planContent_${CURRENT_USER}`, JSON.stringify(DB));
+      const btn = document.getElementById('save-btn');
+      const original = btn.innerHTML;
+      btn.innerHTML = '<i data-lucide="check" style="width:14px;height:14px"></i> Salvo!';
+      setTimeout(() => { btn.innerHTML = original; lucide.createIcons(); }, 1500);
+    }
+
+    function exportJSON() {
+      const data = { user: CURRENT_USER, timestamp: new Date().toISOString(), database: DB };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `planejamento_${CURRENT_USER}_${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function importJSON() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'application/json';
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          try {
+            const imported = JSON.parse(ev.target.result);
+            if (imported.database && imported.database.months) {
+              DB = imported.database;
+              saveUserData();
+              if (currentTab === 0) renderMonths();
+              else if (currentTab === 1) { renderBrand(); renderActivePulsaoSummary(); renderMatrixWeeks(); }
+              else if (currentTab === 2) renderPosts();
+              showToast('✅ Dados importados com sucesso!', '#10b981');
+            } else throw new Error();
+          } catch (err) {
+            showToast('❌ Arquivo inválido ou corrompido', '#ef4444');
+          }
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+    }
+
+    function showToast(msg, bg) {
+      const div = document.createElement('div');
+      div.textContent = msg;
+      div.style.cssText = `position:fixed;bottom:20px;right:20px;background:${bg};color:white;padding:10px 16px;border-radius:8px;font-size:13px;z-index:9999;`;
+      document.body.appendChild(div);
+      setTimeout(() => div.remove(), 3000);
+    }
+
+    function logoutUser() {
+      CURRENT_USER = null;
+      DB = null;
+      document.getElementById('login-screen').classList.remove('hidden');
+      document.getElementById('app').classList.add('hidden');
+    }
+
+    function showApp() {
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      switchTab(0);
+      lucide.createIcons();
+    }
+
+    function switchTab(t) {
+      currentTab = t;
+      document.querySelectorAll('[data-tab]').forEach((btn, idx) => btn.classList.toggle('active', idx === t));
+      for (let i = 0; i < 3; i++) document.getElementById(`tab${i}`).classList.toggle('hidden', i !== t);
+      if (t === 0) renderMonths();
+      if (t === 1) { renderBrand(); renderActivePulsaoSummary(); renderMatrixWeeks(); }
+      if (t === 2) renderPosts();
+    }
+
+    // --- Impulsões Macro ---
+    function renderMonths() {
+      const grid = document.getElementById('months-grid');
+      grid.innerHTML = MONTHS.map((m, i) => `
+        <div class="month-card">
+          <h4 class="font-bold text-base mb-3">${m}</h4>
+          <div class="space-y-3 text-sm">
+            <div><div class="text-[10px] uppercase text-gray-400">Pulsão Comercial</div><div class="text-blue-300">${esc(DB.months[i].pulsao)}</div></div>
+            <div><div class="text-[10px] uppercase text-gray-400">Gatilhos</div><div class="text-gray-300 text-sm">${esc(DB.months[i].gatilhos)}</div></div>
+            <div><div class="text-[10px] uppercase text-gray-400">Oportunidades</div><div class="text-gray-300 text-sm">${esc(DB.months[i].oportunidades)}</div></div>
+            <div><label class="text-[10px] uppercase text-gray-500">Tema Central</label><input value="${esc(DB.months[i].tema)}" onchange="DB.months[${i}].tema=this.value;" class="text-sm"></div>
+            <div><label class="text-[10px] uppercase text-gray-500">Canais Foco</label><input value="${esc(DB.months[i].canais)}" onchange="DB.months[${i}].canais=this.value;" class="text-sm"></div>
+            <div><label class="text-[10px] uppercase text-gray-500">Verba Tráfego</label><input value="${esc(DB.months[i].verba)}" onchange="DB.months[${i}].verba=this.value;" class="text-sm"></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // --- Diretrizes Estáticas ---
+    function renderBrand() {
+      const fields = [['nome','Projeto / Marca'],['objetivo','Objetivo do Ciclo'],['publico','Público-Alvo'],['tom','Tom de Voz']];
+      document.getElementById('brand-fields').innerHTML = fields.map(([k,l]) => `
+        <div><label class="text-[10px] uppercase text-gray-500">${l}</label>
+        <textarea rows="2" onchange="DB.brand['${k}']=this.value;">${esc(DB.brand[k])}</textarea></div>
+      `).join('');
+    }
+
+    function renderActivePulsaoSummary() {
+      const monthIdx = new Date().getMonth();
+      const monthData = DB.months[monthIdx];
+      const container = document.getElementById('active-pulsao-summary');
+      if (container) {
+        container.innerHTML = `
+          <div><strong>${MONTHS[monthIdx]}</strong> - ${monthData.pulsao}</div>
+          <div>🎯 Tema central: ${monthData.tema || '(não definido)'}</div>
+          <div>⚡ Gatilhos: ${monthData.gatilhos}</div>
+          <div>📌 Oportunidades: ${monthData.oportunidades}</div>
+          <div class="text-gray-400 text-[10px] mt-1">⬆️ Alinhe suas diretrizes e posts com esta impulsão</div>
+        `;
+      }
+    }
+
+    function renderMatrixWeeks() {
+      const container = document.getElementById('matrix-container');
+      container.innerHTML = DB.matrix.map((week, weekIndex) => `
+        <div class="border border-gray-700 rounded-lg p-3">
+          <div class="flex justify-between mb-3"><span class="text-xs font-bold">Semana ${weekIndex+1}</span>
+            ${weekIndex > 0 ? `<button onclick="DB.matrix.splice(${weekIndex},1);renderMatrixWeeks()" class="text-red-400"><i data-lucide="trash-2" style="width:14px"></i></button>` : ''}
+          </div>
+          <table class="text-xs w-full">
+            <thead><tr><th>Dia</th><th>Funil</th><th>TUG</th><th>Notas</th></tr></thead>
+            <tbody>
+              ${DIAS.map((d, i) => `
+                <tr>
+                  <td class="font-medium">${d}</td>
+                  <td>
+                    <select onchange="DB.matrix[${weekIndex}][${i}].funil=this.value;DB.matrix[${weekIndex}][${i}].funilCustom='';renderMatrixWeeks()" class="text-xs">${FUNIL_OPTS.map(f => `<option ${week[i].funil===f ? 'selected' : ''}>${f}</option>`).join('')}<option ${week[i].funilCustom?'selected':''}>Outro</option></select>
+                    ${week[i].funilCustom ? `<input value="${esc(week[i].funilCustom)}" onchange="DB.matrix[${weekIndex}][${i}].funilCustom=this.value;" class="text-xs w-full mt-1">` : ''}
+                   </td>
+                  <td>
+                    <select onchange="DB.matrix[${weekIndex}][${i}].tug=this.value;DB.matrix[${weekIndex}][${i}].tugCustom='';renderMatrixWeeks()" class="text-xs">${TUG_OPTS.map(t => `<option ${week[i].tug===t ? 'selected' : ''}>${t}</option>`).join('')}<option ${week[i].tugCustom?'selected':''}>Outro</option></select>
+                    ${week[i].tugCustom ? `<input value="${esc(week[i].tugCustom)}" onchange="DB.matrix[${weekIndex}][${i}].tugCustom=this.value;" class="text-xs w-full mt-1">` : ''}
+                   </td>
+                  <td><input value="${esc(week[i].notas)}" onchange="DB.matrix[${weekIndex}][${i}].notas=this.value;" class="text-xs"></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function addWeekMatrix() {
+      DB.matrix.push(DIAS.map(() => ({ funil: FUNIL_OPTS[0], tug: TUG_OPTS[0], notas: '', funilCustom: '', tugCustom: '' })));
+      renderMatrixWeeks();
+    }
+
+    // --- Calendário Operacional com integração do funil via diretrizes ---
+    function getAllUniqueThemes() {
+      const themesSet = new Set();
+      DB.months.forEach(month => { if (month.tema && month.tema.trim()) themesSet.add(month.tema.trim()); });
+      DB.posts.forEach(post => { if (post.tema && post.tema.trim()) themesSet.add(post.tema.trim()); });
+      return Array.from(themesSet).sort();
+    }
+
+    function renderPosts() {
+      const monthIdx = new Date().getMonth();
+      const currentPulsao = DB.months[monthIdx];
+      const uniqueThemes = getAllUniqueThemes();
+      
+      let datalist = document.getElementById('theme-datalist');
+      if (!datalist) {
+        datalist = document.createElement('datalist');
+        datalist.id = 'theme-datalist';
+        document.body.appendChild(datalist);
+      }
+      datalist.innerHTML = uniqueThemes.map(theme => `<option value="${esc(theme)}">`).join('');
+
+      const tbody = document.getElementById('posts-body');
+      tbody.innerHTML = DB.posts.map((p, idx) => {
+        const postTheme = (p.tema || '').toLowerCase();
+        const monthTheme = (currentPulsao.tema || '').toLowerCase();
+        const keywords = (currentPulsao.gatilhos || '').toLowerCase();
+        const isAligned = (monthTheme && postTheme.includes(monthTheme)) || (keywords && keywords.split(',').some(k => postTheme.includes(k.trim())));
+        const warning = !isAligned && p.tema ? `<span class="warning-badge">⚠️ fora da impulsão</span>` : '';
+        
+        return `<tr>
+          <td><input type="date" value="${p.date || ''}" onchange="DB.posts[${idx}].date=this.value; updatePostFunnelAndTug(${idx});" class="text-xs w-28"></td>
+          <td>
+            <select onchange="DB.posts[${idx}].dia=this.value; updatePostFunnelAndTug(${idx});" class="text-xs">
+              ${DIAS.map(d => `<option ${p.dia===d ? 'selected' : ''}>${d}</option>`).join('')}
+            </select>
+          </td>
+          <td>
+            <input list="theme-datalist" value="${esc(p.tema)}" onchange="DB.posts[${idx}].tema=this.value; renderPosts();" class="text-xs min-w-[160px]" placeholder="Digite ou selecione">
+            ${warning}
+           </td>
+          <td><select onchange="DB.posts[${idx}].status=this.value;renderPosts()" class="text-xs badge ${statusClass(p.status)}">${STATUS_OPTS.map(s => `<option ${p.status===s ? 'selected' : ''}>${s}</option>`).join('')}</select></td>
+          <td>
+            <select onchange="DB.posts[${idx}].canal=this.value;DB.posts[${idx}].canalCustom='';renderPosts()" class="text-xs">${CANAIS.map(c => `<option ${p.canal===c ? 'selected' : ''}>${c}</option>`).join('')}<option ${p.canalCustom?'selected':''}>Outro</option></select>
+            ${p.canalCustom ? `<input value="${esc(p.canalCustom)}" onchange="DB.posts[${idx}].canalCustom=this.value;" class="text-xs w-full mt-1">` : ''}
+           </td>
+          <td>
+            <select onchange="DB.posts[${idx}].formato=this.value;DB.posts[${idx}].formatoCustom='';renderPosts()" class="text-xs">${FORMATOS.map(f => `<option ${p.formato===f ? 'selected' : ''}>${f}</option>`).join('')}<option ${p.formatoCustom?'selected':''}>Outro</option></select>
+            ${p.formatoCustom ? `<input value="${esc(p.formatoCustom)}" onchange="DB.posts[${idx}].formatoCustom=this.value;" class="text-xs w-full mt-1">` : ''}
+           </td>
+          <td>
+            <select onchange="DB.posts[${idx}].funil=this.value;DB.posts[${idx}].funilCustom='';renderPosts()" class="text-xs badge ${funilClass(p.funil)}">${FUNIL_OPTS.map(f => `<option ${p.funil===f ? 'selected' : ''}>${f}</option>`).join('')}<option ${p.funilCustom?'selected':''}>Outro</option></select>
+            ${p.funilCustom ? `<input value="${esc(p.funilCustom)}" onchange="DB.posts[${idx}].funilCustom=this.value;" class="text-xs w-full mt-1">` : ''}
+           </td>
+          <td>
+            <select onchange="DB.posts[${idx}].tug=this.value;DB.posts[${idx}].tugCustom='';renderPosts()" class="text-xs">${TUG_OPTS.map(t => `<option ${p.tug===t ? 'selected' : ''}>${t}</option>`).join('')}<option ${p.tugCustom?'selected':''}>Outro</option></select>
+            ${p.tugCustom ? `<input value="${esc(p.tugCustom)}" onchange="DB.posts[${idx}].tugCustom=this.value;" class="text-xs w-full mt-1">` : ''}
+           </td>
+          <td><input value="${esc(p.cta)}" onchange="DB.posts[${idx}].cta=this.value;" class="text-xs min-w-[100px]"></td>
+          <td><input value="${esc(p.notas)}" onchange="DB.posts[${idx}].notas=this.value;" class="text-xs min-w-[100px]"></td>
+          <td class="text-center"><input type="checkbox" ${p.midia ? 'checked' : ''} onchange="DB.posts[${idx}].midia=this.checked;"></td>
+          <td><span class="delete-btn" onclick="DB.posts.splice(${idx},1);renderPosts()"><i data-lucide="x" style="width:14px"></i></span></td>
+        </tr>`;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function addPost() {
+      const today = new Date().toISOString().split('T')[0];
+      const defaultDay = 'Segunda';
+      const defaultFunnelTug = getMatrixValuesForPost(today, DIAS.indexOf(defaultDay));
+      DB.posts.unshift({ 
+        date: today, dia: defaultDay, tema: '', status: 'Ideia', 
+        canal: 'Instagram', formato: 'Reels', 
+        funil: defaultFunnelTug.funil, tug: defaultFunnelTug.tug,
+        cta: '', notas: '', midia: false, 
+        canalCustom: '', formatoCustom: '', funilCustom: '', tugCustom: '' 
+      });
+      renderPosts();
+    }
+
+    // --- Helpers ---
+    function statusClass(s) { return s==='Ideia'?'status-ideia':s==='Planejando'?'status-planejando':s==='Rascunho'?'status-rascunho':'status-publicado'; }
+    function funilClass(f) { return f?.startsWith('Topo')?'funil-topo':f?.startsWith('Meio')?'funil-meio':'funil-base'; }
+    function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+    // Inicialização
+    lucide.createIcons();
+    document.getElementById('user-input').addEventListener('keypress', (e) => { if (e.key === 'Enter') loginUser(); });
+  </script>
+</body>
+</html>
